@@ -17,3 +17,14 @@ def load_text(name: str) -> str:
 @lru_cache
 def tool_texts() -> dict[str, Any]:
     return yaml.safe_load(load_text("tools.yaml"))
+
+
+@lru_cache
+def note_texts() -> dict[str, str]:
+    return yaml.safe_load(load_text("notes.yaml"))
+
+
+def note(key: str, /, **values: Any) -> str:
+    """Короткий текст для модели из notes.yaml: пояснение к результату инструмента или пометка в истории.
+    «/» делает key только позиционным: среди подстановок может быть и своя {key}, и {name}."""
+    return note_texts()[key].format(**values)

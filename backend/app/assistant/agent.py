@@ -36,7 +36,7 @@ from app.assistant.llm.base import (
 )
 from app.assistant.llm.router import ModelRouter
 from app.assistant.masking import Masker, StreamUnmasker
-from app.assistant.prompts import load_text
+from app.assistant.prompts import load_text, note
 from app.clock import today
 from app.formatting import fmt_date
 from app.models import ChatFile, Message, MessageStatus, PendingAction, User
@@ -349,7 +349,7 @@ class Agent:
         for message in reversed(rows):
             text = self.masker.mask_text(message.content)[:HISTORY_CHARS]
             if message.status == MessageStatus.INTERRUPTED:
-                text += "\n[ответ был прерван]"
+                text += "\n" + note("interrupted")
             if text.strip():
                 items.append(UserText(text) if message.role == "user" else AssistantText(text))
         return items
@@ -371,13 +371,8 @@ class Agent:
                 f"{t} (может {who_can(p)})" for p, t in PERMISSION_TEXT.items() if not has_perm(self.user, p)
             )
             or "ограничений нет",
-            memory="Факты о пользователе:\n"
-            + ("\n".join(f"- {self.masker.mask_text(f.fact)}" for f in facts) or "- пока нет"),
-            files="# Загруженные файлы\n"
-            + (
-                "\n".join(f"- {f.filename}: {f.container_path}" for f in uploaded)
-                or "Пользователь файлов не загружал."
-            ),
+            memory="\n".join(f"- {self.masker.mask_text(f.fact)}" for f in facts) or note("no_facts"),
+            files="\n".join(f"- {f.filename}: {f.container_path}" for f in uploaded) or note("no_files"),
         )
 
 

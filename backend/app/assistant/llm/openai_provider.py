@@ -26,6 +26,7 @@ from app.assistant.llm.base import (
     Usage,
     UserText,
 )
+from app.assistant.prompts import note
 
 RETRYABLE_ERROR_CODES = {"server_error", "rate_limit_exceeded", "overloaded", "vector_store_timeout"}
 
@@ -92,7 +93,7 @@ def _to_input(item: HistoryItem) -> dict[str, Any]:
             return {"type": "function_call_output", "call_id": call_id, "output": output}
         case CodeRun(code, logs, _, _):
             # История передаётся явно и не зависит от хранилища OpenAI, поэтому её поймёт и запасная модель.
-            return {"role": "assistant", "content": f"[Выполнен код]\n{code}\n[Вывод]\n{logs[:4000]}"}
+            return {"role": "assistant", "content": note("code_run", code=code, logs=logs[:4000])}
 
 
 class OpenAIProvider:

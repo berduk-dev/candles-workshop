@@ -22,7 +22,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.assistant import actions, memory
 from app.assistant.llm.base import LLMError, ToolSpec
 from app.assistant.masking import Masker
-from app.assistant.prompts import tool_texts
+from app.assistant.prompts import note, tool_texts
 from app.clock import today
 from app.config import get_settings
 from app.errors import DomainError, InvalidInputError, NotFoundError
@@ -37,10 +37,6 @@ from app.services.permissions import Perm, has_perm
 from app.validation_messages import humanize
 
 logger = logging.getLogger(__name__)
-
-# Правило живёт рядом с точными числами, а не в системном промпте: там оно сбивало выбор инструментов
-# в вопросах, где денег нет вовсе (эвал overdue: 42 из 50 → 23 из 40).
-MONEY_NOTE = "Считай по точным значениям, а в ответе округляй деньги до копеек (2 знака)."
 
 
 class DatasetUploader(Protocol):
@@ -155,9 +151,6 @@ class ProposeJobArgs(StrictModel):
 # ---------- чтение ----------
 
 
-OVERDUE_TEXT = "плановая дата раньше сегодняшней, а задание запланировано или в работе"
-
-
 async def _material(ctx: ToolContext, query: str):
     found = await materials.find(ctx.session, ctx.user, query)
     if found:
@@ -166,7 +159,7 @@ async def _material(ctx: ToolContext, query: str):
     similar = await materials.find_similar(ctx.session, ctx.user, query)
     if not similar:
         raise NotFoundError(f"Материал «{query}» не найден.")
-    ctx.notes.append(f"Материала «{query}» нет; показаны похожие: {', '.join(m.name for m in similar)}.")
+    ctx.notes.append(note("similar_materials", query=query, names=", ".join(m.name for m in similar)))
     return similar
 
 
@@ -177,11 +170,11 @@ async def _supplier_filter(ctx: ToolContext, query: str) -> str:
         return query
     similar = await suppliers.find_similar(ctx.session, query)
     if len(similar) == 1:
-        ctx.notes.append(f"Поставщика «{query}» нет; показаны партии похожего: {similar[0].name}.")
+        ctx.notes.append(note("similar_supplier", query=query, name=similar[0].name))
         return similar[0].name
     if similar:
         names = ", ".join(s.name for s in similar)
-        raise NotFoundError(f"Поставщик «{query}» не найден. Похожие: {names}. Уточните у пользователя.")
+        raise NotFoundError(note("several_suppliers", query=query, names=names))
     return query
 
 
@@ -306,7 +299,7 @@ async def list_jobs(ctx: ToolContext, args: ListJobsArgs):
     )
     return {
         "total": page.total,
-        **({"today": today(), "overdue_means": OVERDUE_TEXT} if args.overdue else {}),
+        **({"today": today(), "overdue_means": note("overdue_means")} if args.overdue else {}),
         "jobs": [j.model_dump(exclude={"id", "recipe_id", "status"}) for j in page.items],
     }
 
@@ -366,8 +359,7 @@ async def get_job_cost(ctx: ToolContext, args: JobCostArgs):
     ]
     if not missing:
         return cost
-    warning = f"Оценка НЕПОЛНАЯ, обязательно скажи об этом: из-за дефицита не оценено {'; '.join(missing)}."
-    return {"warning": warning, **cost.model_dump()}
+    return {"warning": note("cost_incomplete", missing="; ".join(missing)), **cost.model_dump()}
 
 
 @tool("list_recipes", "Рецепты", NoArgs, Perm.VIEW_STOCK)
@@ -379,7 +371,7 @@ async def list_recipes(ctx: ToolContext, args: NoArgs):
 async def get_recipe_cost(ctx: ToolContext, args: RecipeCostArgs):
     recipe = await recipes.find_by_name(ctx.session, ctx.user, args.recipe)
     cost = await analytics.recipe_cost(ctx.session, ctx.user, recipe.id, args.currency, ctx.fx)
-    return {**cost.model_dump(), "note": MONEY_NOTE}
+    return {**cost.model_dump(), "note": note("money")}
 
 
 # ---------- данные для Code Interpreter ----------
@@ -392,7 +384,7 @@ async def prepare_dataset(ctx: ToolContext, args: DatasetArgs):
     date_from = args.date_from or date_to - timedelta(days=90)
     rows = await _dataset_rows(ctx, args, date_from, date_to)
     if not rows:
-        return {"rows": 0, "message": "Данных за период нет, файл не создан."}
+        return {"rows": 0, "message": note("dataset_empty")}
     rows = [{k: ctx.masker.mask_obj(_plain(v)) for k, v in row.items()} for row in rows]
     out = io.StringIO()
     writer = csv.DictWriter(out, fieldnames=list(rows[0]))
@@ -403,7 +395,7 @@ async def prepare_dataset(ctx: ToolContext, args: DatasetArgs):
     path = await ctx.upload_dataset(f"{args.kind}.csv", content.encode("utf-8"))
     result = {"path": path, "rows": len(rows), "columns": list(rows[0]), "sample": rows[:3]}
     if args.kind in ("batches", "recipe_cost"):  # цены с четырьмя знаками
-        result["note"] = MONEY_NOTE
+        result["note"] = note("money")
     return result
 
 
@@ -533,10 +525,7 @@ async def propose_cancel_job(ctx: ToolContext, args: JobArgs):
 
 def _proposed(ctx: ToolContext, action) -> dict[str, Any]:
     ctx.actions.append(action)
-    return {
-        "status": "Предложение показано пользователю и ЖДЁТ подтверждения. Данные ещё не изменены.",
-        "preview": action.preview,
-    }
+    return {"status": note("action_proposed"), "preview": action.preview}
 
 
 # ---------- выполнение ----------
