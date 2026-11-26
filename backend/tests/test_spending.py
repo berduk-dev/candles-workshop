@@ -46,8 +46,6 @@ async def test_spending_separates_purchases_from_consumption(session, users, mat
     }
     # Израсходовано 5 кг воска из старой партии по 100 ₽ и 20 стаканов по 10 ₽.
     assert result.consumed.total_rub == D("700.00")
-    assert "закуплено" in result.purchased.meaning and "производство" in result.consumed.meaning
-    assert "НЕЛЬЗЯ складывать" in result.warning
 
     only_wax = await analytics.spending(session, users[Role.STOREKEEPER], *period, [materials["WAX-SOY"].id])
     assert (only_wax.purchased.total_rub, only_wax.consumed.total_rub) == (D("1300.00"), D("500.00"))
@@ -68,6 +66,11 @@ async def test_spending_tool_answers_both_numbers(client, session, users, materi
     assert output["purchased"]["total_rub"] == "1000"
     assert output["consumed"]["total_rub"] == "0"
     assert [r["material"]["code"] for r in output["purchased"]["by_material"]] == ["WAX-SOY"]
+    # Сервис отдаёт только числа; что они значат и почему их нельзя складывать, модели говорит инструмент.
+    assert list(output) == ["date_from", "date_to", "warning", "purchased", "consumed"]
+    assert list(output["purchased"]) == list(output["consumed"]) == ["meaning", "total_rub", "by_material"]
+    assert "НЕЛЬЗЯ складывать" in output["warning"]
+    assert "закуплено" in output["purchased"]["meaning"] and "производство" in output["consumed"]["meaning"]
 
 
 async def test_availability_tool_names_what_is_missing(

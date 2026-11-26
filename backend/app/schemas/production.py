@@ -209,7 +209,6 @@ class SpendingRow(BaseModel):
 
 
 class SpendingPart(BaseModel):
-    meaning: str = Field(description="Что именно посчитано — это нужно сказать пользователю")
     total_rub: Decimal
     by_material: list[SpendingRow]
 
@@ -219,7 +218,6 @@ class SpendingOut(BaseModel):
 
     date_from: date
     date_to: date
-    warning: str = Field(description="Почему два числа нельзя складывать")
     purchased: SpendingPart
     consumed: SpendingPart
 

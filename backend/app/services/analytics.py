@@ -244,19 +244,6 @@ async def recipe_cost(
 # ---------- расход ----------
 
 
-PURCHASED_MEANING = (
-    "закуплено: стоимость всех поступлений за период по цене и курсу из партий, "
-    "включая партии на проверке и брак"
-)
-SPENDING_WARNING = (
-    "Это два разных ответа на «сколько потратили», их НЕЛЬЗЯ складывать: купленное за период частью ещё "
-    "лежит на складе, а израсходованное могло быть куплено раньше. Назови оба числа отдельно."
-)
-CONSUMED_MEANING = (
-    "израсходовано в производство: выдача в цех + перерасход − возврат экономии, по себестоимости партий"
-)
-
-
 async def spending(
     session: AsyncSession,
     user: User,
@@ -264,7 +251,10 @@ async def spending(
     date_to: date,
     material_ids: list[int] | None = None,
 ) -> SpendingOut:
-    """Сколько денег ушло за период — два разных ответа: закупки и расход в производство."""
+    """Сколько денег ушло за период — два разных ответа: закупки и расход в производство.
+    Закуплено — стоимость всех поступлений за период по цене и курсу из партий, включая партии
+    на проверке и брак. Израсходовано — выдача в цех + перерасход − возврат экономии, по себестоимости
+    партий. Складывать их нельзя: купленное частью ещё лежит на складе."""
     require(user, Perm.VIEW_STOCK)
     _check_period(date_from, date_to)
     query = (
@@ -292,15 +282,8 @@ async def spending(
     return SpendingOut(
         date_from=date_from,
         date_to=date_to,
-        warning=SPENDING_WARNING,
-        purchased=SpendingPart(
-            meaning=PURCHASED_MEANING, total_rub=sum((r.cost_rub for r in bought), ZERO), by_material=bought
-        ),
-        consumed=SpendingPart(
-            meaning=CONSUMED_MEANING,
-            total_rub=sum((r.cost_rub for r in consumed), ZERO),
-            by_material=consumed,
-        ),
+        purchased=SpendingPart(total_rub=sum((r.cost_rub for r in bought), ZERO), by_material=bought),
+        consumed=SpendingPart(total_rub=sum((r.cost_rub for r in consumed), ZERO), by_material=consumed),
     )
 
 

@@ -323,7 +323,16 @@ class SpendingArgs(StrictModel):
 @tool("get_spending", "Траты за период", SpendingArgs, Perm.VIEW_STOCK)
 async def get_spending(ctx: ToolContext, args: SpendingArgs):
     ids = [m.id for m in await _material(ctx, args.material)] if args.material else None
-    return await analytics.spending(ctx.session, ctx.user, args.date_from, args.date_to, ids)
+    report = await analytics.spending(ctx.session, ctx.user, args.date_from, args.date_to, ids)
+    # Сервис отдаёт только числа. Что значит каждое и почему их нельзя складывать, модели говорят
+    # тексты из notes.yaml: без них она складывала закупки с расходом в бессмысленное «итого».
+    return {
+        "date_from": report.date_from,
+        "date_to": report.date_to,
+        "warning": note("spending_warning"),
+        "purchased": {"meaning": note("purchased_meaning"), **report.purchased.model_dump()},
+        "consumed": {"meaning": note("consumed_meaning"), **report.consumed.model_dump()},
+    }
 
 
 class AvailabilityArgs(StrictModel):
