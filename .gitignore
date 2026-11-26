@@ -1,0 +1,30 @@
+# секреты
+.env
+.env.*
+!.env.example
+
+# python
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+
+# node
+node_modules/
+dist/
+
+# прочее
+.DS_Store
+storage/
+
+test-results/
+playwright-report/
+
+# личная шпаргалка к собеседованию
+INTERVIEW.md
+
+# демо-видео (записи и монтаж)
+video/
+*.tsbuildinfo

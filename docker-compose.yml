@@ -1,0 +1,116 @@
+name: candles
+
+x-backend-env: &backend-env
+  DATABASE_URL: postgresql+asyncpg://candles:candles@db:5432/candles
+  FX_BASE_URL: http://fx-mock:8081
+  JWT_SECRET: ${JWT_SECRET:-dev-only-secret-change-me}
+  OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+  LLM_PRIMARY_MODEL: ${LLM_PRIMARY_MODEL:-gpt-6-luna}
+  LLM_FALLBACK_MODEL: ${LLM_FALLBACK_MODEL:-gpt-5.4-mini}
+  LLM_REASONING_EFFORT: ${LLM_REASONING_EFFORT:-}
+  LLM_SERVICE_TIER: ${LLM_SERVICE_TIER:-}
+  LLM_STUB: ${LLM_STUB:-false}
+  STORAGE_DIR: /data/storage
+  REDIS_URL: redis://redis:6379
+  MARKING_BASE_URL: http://marking-mock:8082
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: candles
+      POSTGRES_PASSWORD: candles
+      POSTGRES_DB: candles
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U candles -d candles"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  # Отдельная БД для pytest: данные в памяти, порт наружу, чтобы тесты можно было гонять с хоста.
+  db-test:
+    image: postgres:16-alpine
+    profiles: ["test"]
+    environment:
+      POSTGRES_USER: candles
+      POSTGRES_PASSWORD: candles
+      POSTGRES_DB: candles_test
+    ports:
+      - "5433:5432"
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U candles -d candles_test"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  redis:
+    image: redis:7-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  fx-mock:
+    build: ./mocks/fx
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8081/health')"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  marking-mock:
+    build: ./mocks/marking
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8082/health')"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  backend:
+    build: ./backend
+    environment: *backend-env
+    command: sh -c "alembic upgrade head && python -m app.seed && uvicorn app.main:app --host 0.0.0.0 --port 8000 --no-access-log"
+    ports:
+      - "${BACKEND_PORT:-8000}:8000"
+    volumes:
+      - storage:/data/storage
+      - ./backend/evals/reports:/app/evals/reports
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      fx-mock:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health')"]
+      interval: 3s
+      timeout: 3s
+      retries: 60
+
+  worker:
+    build: ./backend
+    environment: *backend-env
+    command: arq app.workers.worker.WorkerSettings
+    depends_on:
+      backend:
+        condition: service_healthy
+      marking-mock:
+        condition: service_healthy
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "${FRONTEND_PORT:-3000}:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+
+volumes:
+  storage:
+  pgdata:
