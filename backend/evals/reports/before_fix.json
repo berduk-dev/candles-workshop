@@ -1,0 +1,657 @@
+{
+  "summary": {
+    "passed": 6,
+    "total": 12,
+    "checks": "55/66",
+    "judge": 0,
+    "answers": 12,
+    "seconds": 4.8718223424972775,
+    "seconds_p50": 5.396436627503135,
+    "seconds_p95": 7.39374812800088,
+    "first_word_p50": 5.001228627515957,
+    "first_word_p95": 7.14471100299852,
+    "steps": 29,
+    "input": 119312,
+    "cached": 113522,
+    "written": 5703,
+    "output": 1410,
+    "reasoning": 403,
+    "containers": 0,
+    "token_cost": 0.002561795
+  },
+  "cases": [
+    {
+      "id": "supplier_typo",
+      "passed": false,
+      "checks": [
+        [
+          "ответ завершён",
+          true
+        ],
+        [
+          "база не изменилась",
+          true
+        ],
+        [
+          "число vosk_batches=6.00",
+          false
+        ],
+        [
+          "есть «Восков»",
+          false
+        ],
+        [
+          "деньги до копеек",
+          true
+        ],
+        [
+          "все числа из данных",
+          true
+        ]
+      ],
+      "judge": {
+        "score": null,
+        "reason": "без судьи"
+      },
+      "times": [
+        7.39374812800088
+      ],
+      "first_words": [
+        7.14471100299852
+      ],
+      "tools": [
+        "list_batches"
+      ],
+      "code_runs": 0,
+      "usage": {
+        "input": 8103,
+        "output": 42,
+        "cached": 4026,
+        "written": 4071,
+        "reasoning": 0,
+        "steps": 2,
+        "containers": 0
+      },
+      "answer": "В системе не найдено партий от поставщика «Васкового двара»."
+    },
+    {
+      "id": "overdue",
+      "passed": false,
+      "checks": [
+        [
+          "ответ завершён",
+          true
+        ],
+        [
+          "база не изменилась",
+          true
+        ],
+        [
+          "есть «З-000015» (overdue_jobs)",
+          false
+        ],
+        [
+          "деньги до копеек",
+          true
+        ],
+        [
+          "все числа из данных",
+          true
+        ]
+      ],
+      "judge": {
+        "score": null,
+        "reason": "без судьи"
+      },
+      "times": [
+        3.2525030850083567
+      ],
+      "first_words": [
+        2.808664709009463
+      ],
+      "tools": [
+        "list_jobs"
+      ],
+      "code_runs": 0,
+      "usage": {
+        "input": 8106,
+        "output": 63,
+        "cached": 8036,
+        "written": 64,
+        "reasoning": 0,
+        "steps": 2,
+        "containers": 0
+      },
+      "answer": "Просроченных заданий нет: среди запланированных заданий со сроком до 25.11.2026 система ничего не нашла."
+    },
+    {
+      "id": "supplier_typo",
+      "passed": false,
+      "checks": [
+        [
+          "ответ завершён",
+          true
+        ],
+        [
+          "база не изменилась",
+          true
+        ],
+        [
+          "число vosk_batches=6.00",
+          false
+        ],
+        [
+          "есть «Восков»",
+          false
+        ],
+        [
+          "деньги до копеек",
+          true
+        ],
+        [
+          "все числа из данных",
+          true
+        ]
+      ],
+      "judge": {
+        "score": null,
+        "reason": "без судьи"
+      },
+      "times": [
+        5.591672293987358
+      ],
+      "first_words": [
+        5.265102043980733
+      ],
+      "tools": [
+        "list_batches"
+      ],
+      "code_runs": 0,
+      "usage": {
+        "input": 8103,
+        "output": 42,
+        "cached": 8097,
+        "written": 0,
+        "reasoning": 0,
+        "steps": 2,
+        "containers": 0
+      },
+      "answer": "Партий от поставщика «Васкового двара» не найдено."
+    },
+    {
+      "id": "overdue",
+      "passed": true,
+      "checks": [
+        [
+          "ответ завершён",
+          true
+        ],
+        [
+          "база не изменилась",
+          true
+        ],
+        [
+          "есть «З-000015» (overdue_jobs)",
+          true
+        ],
+        [
+          "деньги до копеек",
+          true
+        ],
+        [
+          "все числа из данных",
+          true
+        ]
+      ],
+      "judge": {
+        "score": null,
+        "reason": "без судьи"
+      },
+      "times": [
+        6.003637210989837
+      ],
+      "first_words": [
+        5.257964210992213
+      ],
+      "tools": [
+        "list_jobs",
+        "list_jobs",
+        "list_jobs"
+      ],
+      "code_runs": 0,
+      "usage": {
+        "input": 12357,
+        "output": 211,
+        "cached": 12125,
+        "written": 223,
+        "reasoning": 60,
+        "steps": 3,
+        "containers": 0
+      },
+      "answer": "Просрочено одно задание: **З-000015** — свеча «Лаванда», 50 шт., плановая дата 24.11.2026. Статус — **«В работе»**."
+    },
+    {
+      "id": "supplier_typo",
+      "passed": false,
+      "checks": [
+        [
+          "ответ завершён",
+          true
+        ],
+        [
+          "база не изменилась",
+          true
+        ],
+        [
+          "число vosk_batches=6.00",
+          false
+        ],
+        [
+          "есть «Восков»",
+          false
+        ],
+        [
+          "деньги до копеек",
+          true
+        ],
+        [
+          "все числа из данных",
+          true
+        ]
+      ],
+      "judge": {
+        "score": null,
+        "reason": "без судьи"
+      },
+      "times": [
+        3.3753377520188224
+      ],
+      "first_words": [
+        3.1945803350245114
+      ],
+      "tools": [
+        "list_batches"
+      ],
+      "code_runs": 0,
+      "usage": {
+        "input": 8104,
+        "output": 44,
+        "cached": 8052,
+        "written": 46,
+        "reasoning": 0,
+        "steps": 2,
+        "containers": 0
+      },
+      "answer": "Партий от поставщика «Васковый двар» не найдено."
+    },
+    {
+      "id": "overdue",
+      "passed": true,
+      "checks": [
+        [
+          "ответ завершён",
+          true
+        ],
+        [
+          "база не изменилась",
+          true
+        ],
+        [
+          "есть «З-000015» (overdue_jobs)",
+          true
+        ],
+        [
+          "деньги до копеек",
+          true
+        ],
+        [
+          "все числа из данных",
+          true
+        ]
+      ],
+      "judge": {
+        "score": null,
+        "reason": "без судьи"
+      },
+      "times": [
+        5.666234168980736
+      ],
+      "first_words": [
+        5.326557834981941
+      ],
+      "tools": [
+        "list_jobs",
+        "list_jobs",
+        "list_jobs"
+      ],
+      "code_runs": 0,
+      "usage": {
+        "input": 12357,
+        "output": 185,
+        "cached": 12175,
+        "written": 173,
+        "reasoning": 40,
+        "steps": 3,
+        "containers": 0
+      },
+      "answer": "Просрочено задание **З-000015** — свеча «Лаванда», 50 шт. Плановая дата — 24.11.2026, статус — «В работе»."
+    },
+    {
+      "id": "supplier_typo",
+      "passed": false,
+      "checks": [
+        [
+          "ответ завершён",
+          true
+        ],
+        [
+          "база не изменилась",
+          true
+        ],
+        [
+          "число vosk_batches=6.00",
+          false
+        ],
+        [
+          "есть «Восков»",
+          false
+        ],
+        [
+          "деньги до копеек",
+          true
+        ],
+        [
+          "все числа из данных",
+          true
+        ]
+      ],
+      "judge": {
+        "score": null,
+        "reason": "без судьи"
+      },
+      "times": [
+        3.46421200101031
+      ],
+      "first_words": [
+        3.135084834008012
+      ],
+      "tools": [
+        "list_batches"
+      ],
+      "code_runs": 0,
+      "usage": {
+        "input": 8103,
+        "output": 79,
+        "cached": 8097,
+        "written": 0,
+        "reasoning": 35,
+        "steps": 2,
+        "containers": 0
+      },
+      "answer": "Поставщик «Васкового двара» не найден — партий нет."
+    },
+    {
+      "id": "overdue",
+      "passed": true,
+      "checks": [
+        [
+          "ответ завершён",
+          true
+        ],
+        [
+          "база не изменилась",
+          true
+        ],
+        [
+          "есть «З-000015» (overdue_jobs)",
+          true
+        ],
+        [
+          "деньги до копеек",
+          true
+        ],
+        [
+          "все числа из данных",
+          true
+        ]
+      ],
+      "judge": {
+        "score": null,
+        "reason": "без судьи"
+      },
+      "times": [
+        5.210544461006066
+      ],
+      "first_words": [
+        4.861736253020354
+      ],
+      "tools": [
+        "list_jobs",
+        "list_jobs",
+        "list_jobs"
+      ],
+      "code_runs": 0,
+      "usage": {
+        "input": 12357,
+        "output": 182,
+        "cached": 12348,
+        "written": 0,
+        "reasoning": 37,
+        "steps": 3,
+        "containers": 0
+      },
+      "answer": "Просрочено задание **З-000015** — свеча «Лаванда», 50 шт. Плановая дата — 24.11.2026, статус — «В работе»."
+    },
+    {
+      "id": "supplier_typo",
+      "passed": false,
+      "checks": [
+        [
+          "ответ завершён",
+          true
+        ],
+        [
+          "база не изменилась",
+          true
+        ],
+        [
+          "число vosk_batches=6.00",
+          false
+        ],
+        [
+          "есть «Восков»",
+          false
+        ],
+        [
+          "деньги до копеек",
+          true
+        ],
+        [
+          "все числа из данных",
+          true
+        ]
+      ],
+      "judge": {
+        "score": null,
+        "reason": "без судьи"
+      },
+      "times": [
+        3.152792501990916
+      ],
+      "first_words": [
+        2.832089334988268
+      ],
+      "tools": [
+        "list_batches"
+      ],
+      "code_runs": 0,
+      "usage": {
+        "input": 8103,
+        "output": 42,
+        "cached": 8097,
+        "written": 0,
+        "reasoning": 0,
+        "steps": 2,
+        "containers": 0
+      },
+      "answer": "Партий от поставщика «Васкового двара» не найдено."
+    },
+    {
+      "id": "overdue",
+      "passed": true,
+      "checks": [
+        [
+          "ответ завершён",
+          true
+        ],
+        [
+          "база не изменилась",
+          true
+        ],
+        [
+          "есть «З-000015» (overdue_jobs)",
+          true
+        ],
+        [
+          "деньги до копеек",
+          true
+        ],
+        [
+          "все числа из данных",
+          true
+        ]
+      ],
+      "judge": {
+        "score": null,
+        "reason": "без судьи"
+      },
+      "times": [
+        5.582328794000205
+      ],
+      "first_words": [
+        5.14072100201156
+      ],
+      "tools": [
+        "list_jobs",
+        "list_jobs"
+      ],
+      "code_runs": 0,
+      "usage": {
+        "input": 12297,
+        "output": 147,
+        "cached": 12175,
+        "written": 113,
+        "reasoning": 40,
+        "steps": 3,
+        "containers": 0
+      },
+      "answer": "Просрочено одно задание: **З-000015** — свеча «Лаванда», 50 шт. Плановая дата — 24.11.2026, статус — «В работе»."
+    },
+    {
+      "id": "supplier_typo",
+      "passed": true,
+      "checks": [
+        [
+          "ответ завершён",
+          true
+        ],
+        [
+          "база не изменилась",
+          true
+        ],
+        [
+          "число vosk_batches=6.00",
+          true
+        ],
+        [
+          "есть «Восков»",
+          true
+        ],
+        [
+          "деньги до копеек",
+          true
+        ],
+        [
+          "все числа из данных",
+          true
+        ]
+      ],
+      "judge": {
+        "score": null,
+        "reason": "без судьи"
+      },
+      "times": [
+        3.291448459989624
+      ],
+      "first_words": [
+        3.083660959993722
+      ],
+      "tools": [
+        "list_batches"
+      ],
+      "code_runs": 0,
+      "usage": {
+        "input": 8731,
+        "output": 74,
+        "cached": 8052,
+        "written": 673,
+        "reasoning": 32,
+        "steps": 2,
+        "containers": 0
+      },
+      "answer": "От «Воскового двора» поступило **6 партий**."
+    },
+    {
+      "id": "overdue",
+      "passed": true,
+      "checks": [
+        [
+          "ответ завершён",
+          true
+        ],
+        [
+          "база не изменилась",
+          true
+        ],
+        [
+          "есть «З-000015» (overdue_jobs)",
+          true
+        ],
+        [
+          "деньги до копеек",
+          true
+        ],
+        [
+          "все числа из данных",
+          true
+        ]
+      ],
+      "judge": {
+        "score": null,
+        "reason": "без судьи"
+      },
+      "times": [
+        6.477409252984216
+      ],
+      "first_words": [
+        6.092773710988695
+      ],
+      "tools": [
+        "list_jobs",
+        "list_jobs",
+        "list_jobs"
+      ],
+      "code_runs": 0,
+      "usage": {
+        "input": 12591,
+        "output": 299,
+        "cached": 12242,
+        "written": 340,
+        "reasoning": 159,
+        "steps": 3,
+        "containers": 0
+      },
+      "answer": "Просрочено одно задание:\n\n- **З-000015** — свеча «Лаванда», 50 шт.; плановая дата — 24.11.2026, статус — «В работе»."
+    }
+  ]
+}
