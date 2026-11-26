@@ -122,7 +122,8 @@ export function JobPage() {
         </div>
       </section>
       <ErrorBox error={act.error} />
-      {editing && <JobForm job={job} onSaved={() => setEditing(false)} />}
+      {/* Править можно только черновик: после «Запланировать» форма исчезает сама. */}
+      {editing && job.status === "draft" && <JobForm job={job} onSaved={() => setEditing(false)} />}
       {completing && (
         <CompleteForm job={job} pending={act.isPending} onSubmit={(body) => run("complete", body)} />
       )}
