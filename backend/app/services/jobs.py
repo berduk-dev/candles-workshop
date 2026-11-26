@@ -9,7 +9,7 @@ from collections import defaultdict
 from datetime import date
 from decimal import Decimal
 
-from sqlalchemy import func, select
+from sqlalchemy import case, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.clock import now, today
@@ -45,10 +45,20 @@ from app.services import audit, marking, recipes
 from app.services.permissions import Perm, require
 from app.services.recipes import material_out
 from app.services.reservations import ZERO, allocate_fifo, free_qty, lock_batches
+from app.services.sorting import order_by
 from app.services.text import like_pattern, normalize_doc_number
 
 # Незавершённые задания, которые могут опаздывать. Черновик ещё не план, поэтому сюда не входит.
 OVERDUE_STATUSES = (JobStatus.PLANNED, JobStatus.IN_PROGRESS)
+# Статусы сортируются по ходу работы, а не по алфавиту.
+_STATUS_ORDER = case({s: i for i, s in enumerate(JobStatus)}, value=Job.status, else_=len(JobStatus))
+JOB_SORT_COLUMNS = {
+    "number": Job.number,
+    "recipe": Recipe.name,
+    "qty": Job.qty,
+    "status": _STATUS_ORDER,
+    "planned_date": Job.planned_date,
+}
 JOB_AUDIT_FIELDS = ["number", "recipe_id", "qty", "planned_date", "status", "produced_qty"]
 
 
@@ -425,6 +435,7 @@ async def list_jobs(
     date_to: date | None = None,
     search: str | None = None,
     overdue: bool = False,
+    sort: str = "-planned_date",
     page: int = 1,
     page_size: int = 20,
 ) -> Page[JobOut]:
@@ -446,7 +457,7 @@ async def list_jobs(
     total = await session.scalar(select(func.count()).select_from(query.with_only_columns(Job.id).subquery()))
     rows = (
         await session.execute(
-            query.order_by(Job.planned_date.desc(), Job.id.desc())
+            query.order_by(*order_by(sort, JOB_SORT_COLUMNS, Job.id))
             .offset((page - 1) * page_size)
             .limit(page_size)
         )

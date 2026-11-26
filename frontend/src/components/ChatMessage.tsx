@@ -230,7 +230,7 @@ function ActionCard({ action }: { action: Action }) {
         <p className="border-t border-line px-4 py-3 text-sm">
           {action.result}{" "}
           {action.status === "confirmed" && (
-            <Link className={linkClass} to="/jobs">
+            <Link className={linkClass} to="/jobs?period=all">
               К заданиям
             </Link>
           )}

@@ -24,8 +24,10 @@ router = APIRouter(tags=["Склад"])
 
 
 @router.get("/materials", response_model=list[MaterialStockOut], summary="Материалы с остатками")
-async def list_materials(session: SessionDep, user: CurrentUser, search: str | None = None):
-    return await materials.list_with_stock(session, user, search)
+async def list_materials(
+    session: SessionDep, user: CurrentUser, search: str | None = None, sort: str = "code"
+):
+    return await materials.list_with_stock(session, user, search, sort)
 
 
 @router.post("/materials", response_model=MaterialOut, status_code=201, summary="Завести материал")

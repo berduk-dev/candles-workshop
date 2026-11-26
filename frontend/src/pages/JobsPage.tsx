@@ -1,7 +1,7 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ClipboardList, Plus, TriangleAlert, X } from "lucide-react";
 import { type FormEvent, useState } from "react";
-import { Link, useNavigate, useSearchParams } from "react-router";
+import { Link, useNavigate } from "react-router";
 
 import {
   Badge,
@@ -16,7 +16,9 @@ import {
   linkClass,
   PageHeader,
   Pager,
+  PeriodPicker,
   rowClass,
+  SortableTh,
   Spinner,
   TableCard,
   tdClass,
@@ -27,6 +29,8 @@ import { api } from "../lib/api";
 import { useCan } from "../lib/auth";
 import { useCount } from "../lib/counts";
 import { day, num, todayIso } from "../lib/format";
+import { DEFAULT_PERIOD, type Range, readPeriod, withRange } from "../lib/period";
+import { useUrlParams } from "../lib/url";
 import type { Job, JobCard, Page, Recipe } from "../lib/types";
 
 const STATUSES = [
@@ -39,17 +43,36 @@ const STATUSES = [
   ["overdue", "Просроченные"],
 ] as const;
 
-/** Вкладка → параметры запроса. «Просроченные» — не статус, а отдельный фильтр бэкенда. */
-const filterQuery = (tab: string) => (tab === "overdue" ? "overdue=true" : tab ? `status=${tab}` : "");
+const COLUMNS = [
+  ["number", "Номер"],
+  ["recipe", "Рецепт"],
+  ["qty", "Количество"],
+  [null, "Этапы"],
+  ["status", "Статус"],
+  ["planned_date", "Плановая дата"],
+] as const;
+
+/** Вкладка и период → параметры запроса. «Просроченные» — не статус, а отдельный фильтр бэкенда,
+ *  и смотрят их за всё время: опоздавшее с прошлого месяца не должно пропадать из виду. */
+function filterQuery(tab: string, range: Range): URLSearchParams {
+  if (tab === "overdue") return new URLSearchParams({ overdue: "true" });
+  const query = withRange(new URLSearchParams(), range, "date_from", "date_to");
+  if (tab) query.set("status", tab);
+  return query;
+}
 
 export function JobsPage() {
-  const [params, setParams] = useSearchParams();
+  const [params, update] = useUrlParams();
   const [creating, setCreating] = useState(false);
   const canManage = useCan("job_manage");
   const status = params.get("status") ?? "";
+  const sort = params.get("sort") ?? "-planned_date";
   const page = Number(params.get("page") ?? 1);
-  const query = new URLSearchParams({ page: String(page), page_size: "20" });
-  for (const [key, value] of new URLSearchParams(filterQuery(status))) query.set(key, value);
+  const { period, range } = readPeriod(params, "date_from", "date_to");
+  const query = filterQuery(status, range);
+  query.set("sort", sort);
+  query.set("page", String(page));
+  query.set("page_size", "20");
 
   const { data, error } = useQuery({
     queryKey: ["jobs", query.toString()],
@@ -71,6 +94,15 @@ export function JobsPage() {
         )}
       </PageHeader>
       {creating && <JobForm />}
+      {status !== "overdue" && (
+        <div className="mb-3">
+          <PeriodPicker
+            label="Плановая дата"
+            value={period}
+            onChange={(next) => update({ period: next === DEFAULT_PERIOD ? "" : next })}
+          />
+        </div>
+      )}
       <div className="mb-4 flex gap-6 overflow-x-auto border-b border-line">
         {STATUSES.map(([value, label]) => (
           <button
@@ -78,10 +110,10 @@ export function JobsPage() {
             type="button"
             aria-pressed={status === value}
             className={`flex items-center gap-2 border-b-2 pb-2.5 whitespace-nowrap transition-colors ${status === value ? "border-flame font-medium" : "border-transparent text-muted hover:text-ink"}`}
-            onClick={() => setParams(value ? { status: value } : {})}
+            onClick={() => update({ status: value })}
           >
             {label}
-            <StatusCount status={value} />
+            <StatusCount status={value} range={range} />
           </button>
         ))}
       </div>
@@ -91,24 +123,36 @@ export function JobsPage() {
         <TableCard
           footer={
             data.total === 0 ? (
-              <Empty icon={ClipboardList}>Заданий с таким статусом нет.</Empty>
+              <Empty icon={ClipboardList}>
+                Заданий с таким статусом нет{status !== "overdue" && " за выбранный период"}.
+              </Empty>
             ) : (
               <Pager
                 page={page}
                 pageSize={20}
                 total={data.total}
-                onPage={(p) => setParams({ ...(status && { status }), page: String(p) })}
+                onPage={(p) => update({ page: String(p) })}
               />
             )
           }
         >
           <thead className={theadClass}>
             <tr>
-              {["Номер", "Рецепт", "Количество", "Этапы", "Статус", "Плановая дата"].map((t) => (
-                <th key={t} className={thClass}>
-                  {t}
-                </th>
-              ))}
+              {COLUMNS.map(([field, title]) =>
+                field ? (
+                  <SortableTh
+                    key={title}
+                    field={field}
+                    title={title}
+                    sort={sort}
+                    onSort={(next) => update({ sort: next })}
+                  />
+                ) : (
+                  <th key={title} className={thClass}>
+                    {title}
+                  </th>
+                ),
+              )}
             </tr>
           </thead>
           <tbody>
@@ -145,8 +189,8 @@ export function JobsPage() {
   );
 }
 
-function StatusCount({ status }: { status: string }) {
-  const count = useCount(`/jobs?${filterQuery(status)}`);
+function StatusCount({ status, range }: { status: string; range: Range }) {
+  const count = useCount(`/jobs?${filterQuery(status, range)}`);
   if (count === undefined) return null;
   return (
     <span className="rounded-md bg-paper px-1.5 text-xs font-medium text-muted tabular-nums">{count}</span>

@@ -62,6 +62,7 @@ async def list_jobs(
     date_to: date | None = None,
     search: str | None = None,
     overdue: bool = False,
+    sort: str = "-planned_date",
     page: int = 1,
     page_size: int = 20,
 ):
@@ -73,6 +74,7 @@ async def list_jobs(
         date_to=date_to,
         search=search,
         overdue=overdue,
+        sort=sort,
         page=page,
         page_size=page_size,
     )

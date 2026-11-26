@@ -22,6 +22,7 @@ from app.schemas.inventory import (
 )
 from app.services import audit
 from app.services.permissions import Perm, require
+from app.services.sorting import order_by
 from app.services.text import like_pattern, normalize_doc_number
 
 # Поля партии, которые попадают в журнал изменений.
@@ -124,12 +125,7 @@ def _apply_filters(query: Select, filters: BatchFilters) -> Select:
 
 
 def _order_by(sort: str):
-    descending = sort.startswith("-")
-    field = sort.lstrip("-")
-    column = _SORT_COLUMNS.get(field)
-    if column is None:
-        raise InvalidInputError(f"Нельзя сортировать по полю «{field}».")
-    return [column.desc() if descending else column.asc(), Batch.id.desc() if descending else Batch.id.asc()]
+    return order_by(sort, _SORT_COLUMNS, Batch.id)
 
 
 async def list_batches(

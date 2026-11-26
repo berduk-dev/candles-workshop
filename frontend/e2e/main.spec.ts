@@ -48,7 +48,8 @@ test("поступление → задание через ассистента 
   await card.getByRole("button", { name: "Подтвердить" }).click();
   await expect(card).toContainText("создано и запланировано");
   const number = /З-\d{6}/.exec((await card.textContent()) ?? "")?.[0];
-  await page.getByRole("link", { name: "Задания", exact: true }).click();
+  // Плановая дата может попасть на следующий месяц, а список по умолчанию — за этот.
+  await page.goto("/jobs?period=all");
   await page.getByRole("link", { name: number }).click();
   await expect(page.getByText("Запланировано").first()).toBeVisible();
   await expect(page.locator('[data-light="green"]')).toHaveCount(7);

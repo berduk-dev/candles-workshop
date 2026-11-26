@@ -1,8 +1,11 @@
 import {
+  ArrowDown,
   ArrowLeft,
+  ArrowUp,
   CalendarCheck,
   ChevronLeft,
   ChevronRight,
+  ChevronsUpDown,
   CircleAlert,
   FilePenLine,
   Flame,
@@ -14,6 +17,7 @@ import { Link } from "react-router";
 
 import { errorText } from "../lib/api";
 import { dateTime, num } from "../lib/format";
+import { PERIODS } from "../lib/period";
 import type { AuditEntry, BatchStatus, JobStatus } from "../lib/types";
 
 type Tone = "ok" | "warn" | "bad" | "wax" | "info" | "muted";
@@ -278,6 +282,69 @@ export function Segmented({
         </button>
       ))}
     </div>
+  );
+}
+
+/** Выбор периода списка. «Свои даты» появляются, когда даты введены вручную в колонке. */
+export function PeriodPicker({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  onChange: (period: string) => void;
+}) {
+  const options: readonly (readonly [string, string])[] =
+    value === "custom" ? [...PERIODS, ["custom", "Свои даты"]] : PERIODS;
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <span className="text-xs text-muted">{label}</span>
+      <div role="group" aria-label={label} className="flex flex-wrap rounded-lg bg-paper p-0.5">
+        {options.map(([key, title]) => (
+          <button
+            key={key}
+            type="button"
+            aria-pressed={key === value}
+            className={`rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${key === value ? "bg-card shadow-raised" : "text-muted hover:text-ink"}`}
+            onClick={() => onChange(key)}
+          >
+            {title}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/** Заголовок колонки, который сортирует список: первый клик — по возрастанию, второй — по убыванию. */
+export function SortableTh({
+  field,
+  title,
+  sort,
+  onSort,
+  className = thClass,
+}: {
+  field: string;
+  title: string;
+  sort: string;
+  onSort: (sort: string) => void;
+  className?: string;
+}) {
+  const active = sort.replace("-", "") === field;
+  const descending = active && sort.startsWith("-");
+  const Icon = !active ? ChevronsUpDown : descending ? ArrowDown : ArrowUp;
+  return (
+    <th className={className} aria-sort={active ? (descending ? "descending" : "ascending") : "none"}>
+      <button
+        type="button"
+        className="inline-flex items-center gap-1 hover:text-ink"
+        onClick={() => onSort(active && !descending ? `-${field}` : field)}
+      >
+        {title}
+        <Icon className={`size-3.5 ${active ? "text-wax" : "opacity-40"}`} aria-hidden="true" />
+      </button>
+    </th>
   );
 }
 

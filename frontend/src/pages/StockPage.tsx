@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { Link } from "react-router";
 
 import {
@@ -7,21 +7,35 @@ import {
   linkClass,
   PageHeader,
   rowClass,
+  SortableTh,
   Spinner,
   StatStrip,
   TableCard,
   tdClass,
-  thClass,
   theadClass,
 } from "../components/ui";
 import { api } from "../lib/api";
 import { isZero, num } from "../lib/format";
 import type { MaterialStock } from "../lib/types";
+import { useUrlParams } from "../lib/url";
 
+const COLUMNS = [
+  ["material", "Материал"],
+  ["qty_on_hand", "Остаток"],
+  ["qty_reserved", "В резерве"],
+  ["qty_free", "Свободно"],
+  ["reserved_share", "Занято резервом"],
+  ["qty_on_check", "На проверке"],
+] as const;
+
+/** Остатки — состояние склада на сейчас, поэтому периода здесь нет, только сортировка. */
 export function StockPage() {
+  const [params, update] = useUrlParams();
+  const sort = params.get("sort") ?? "material";
   const { data, error } = useQuery({
-    queryKey: ["materials"],
-    queryFn: () => api.get<MaterialStock[]>("/materials"),
+    queryKey: ["materials", sort],
+    queryFn: () => api.get<MaterialStock[]>(`/materials?sort=${sort}`),
+    placeholderData: keepPreviousData,
   });
   if (error) return <ErrorBox error={error} />;
   if (!data) return <Spinner />;
@@ -40,10 +54,14 @@ export function StockPage() {
       <TableCard>
         <thead className={theadClass}>
           <tr>
-            {["Материал", "Остаток", "В резерве", "Свободно", "Занято резервом", "На проверке"].map((t) => (
-              <th key={t} className={thClass}>
-                {t}
-              </th>
+            {COLUMNS.map(([field, title]) => (
+              <SortableTh
+                key={field}
+                field={field}
+                title={title}
+                sort={sort}
+                onSort={(next) => update({ sort: next })}
+              />
             ))}
           </tr>
         </thead>
@@ -51,7 +69,7 @@ export function StockPage() {
           {data.map((m) => (
             <tr key={m.id} className={rowClass}>
               <td className={tdClass}>
-                <Link className={linkClass} to={`/batches?material=${m.code}`}>
+                <Link className={linkClass} to={`/batches?material=${m.code}&period=all`}>
                   {m.name}
                 </Link>
                 <div className="mt-0.5 text-xs text-muted">{m.code}</div>

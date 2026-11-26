@@ -11,6 +11,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import AuditLog, User
 from app.services.permissions import Perm, require
+from app.services.sorting import day_bounds, order_by
+
+AUDIT_SORT_COLUMNS = {
+    "at": AuditLog.at,
+    "user": AuditLog.user_full_name,
+    "entity": AuditLog.entity,
+    "action": AuditLog.action,
+}
 
 
 def _json_safe(value: Any) -> Any:
@@ -61,18 +69,28 @@ async def list_entries(
     *,
     entity: str | None = None,
     entity_id: int | None = None,
+    date_from: date | None = None,
+    date_to: date | None = None,
+    sort: str = "-at",
     page: int = 1,
     page_size: int = 50,
 ) -> tuple[list[AuditLog], int]:
     require(user, Perm.AUDIT_VIEW)
     query = select(AuditLog)
+    start, end = day_bounds(date_from, date_to)
+    if start:
+        query = query.where(AuditLog.at >= start)
+    if end:
+        query = query.where(AuditLog.at < end)
     if entity:
         query = query.where(AuditLog.entity == entity)
     if entity_id is not None:
         query = query.where(AuditLog.entity_id == entity_id)
     total = await session.scalar(select(func.count()).select_from(query.subquery()))
     rows = await session.scalars(
-        query.order_by(AuditLog.at.desc(), AuditLog.id.desc()).offset((page - 1) * page_size).limit(page_size)
+        query.order_by(*order_by(sort, AUDIT_SORT_COLUMNS, AuditLog.id))
+        .offset((page - 1) * page_size)
+        .limit(page_size)
     )
     return list(rows), total or 0
 

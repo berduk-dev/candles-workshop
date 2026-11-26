@@ -9,6 +9,7 @@ from app.schemas.inventory import MaterialCreate, MaterialOut, MaterialStockOut
 from app.services import audit
 from app.services.morph import same_text, similar_text
 from app.services.permissions import Perm, require
+from app.services.sorting import order_by
 from app.services.text import like_pattern
 
 ZERO = Decimal("0")
@@ -50,10 +51,21 @@ def _to_stock_out(material: Material, on_hand, reserved, on_check) -> MaterialSt
 
 
 async def list_with_stock(
-    session: AsyncSession, user: User, search: str | None = None
+    session: AsyncSession, user: User, search: str | None = None, sort: str = "code"
 ) -> list[MaterialStockOut]:
     require(user, Perm.VIEW_STOCK)
     stock = _stock_subquery()
+    on_hand, reserved = func.coalesce(stock.c.on_hand, 0), func.coalesce(stock.c.reserved, 0)
+    columns = {
+        "code": Material.code,
+        "material": Material.name,
+        "qty_on_hand": on_hand,
+        "qty_reserved": reserved,
+        "qty_free": on_hand - reserved,
+        # Доля остатка под резервом; у материала без остатка доли нет — такие в конце.
+        "reserved_share": reserved / func.nullif(on_hand, 0),
+        "qty_on_check": func.coalesce(stock.c.on_check, 0),
+    }
     query = select(Material, stock.c.on_hand, stock.c.reserved, stock.c.on_check).outerjoin(
         stock, stock.c.material_id == Material.id
     )
@@ -62,7 +74,7 @@ async def list_with_stock(
         query = query.where(
             or_(Material.code.ilike(pattern, escape="\\"), Material.name.ilike(pattern, escape="\\"))
         )
-    rows = await session.execute(query.order_by(Material.code))
+    rows = await session.execute(query.order_by(*order_by(sort, columns, Material.id)))
     return [_to_stock_out(*row) for row in rows]
 
 

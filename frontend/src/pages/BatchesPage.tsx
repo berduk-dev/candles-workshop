@@ -1,7 +1,7 @@
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
-import { ArrowDown, ArrowUp, ChevronsUpDown, Download, PackageSearch, Plus, X } from "lucide-react";
+import { Download, PackageSearch, Plus, X } from "lucide-react";
 import { useEffect, useState } from "react";
-import { Link, useSearchParams } from "react-router";
+import { Link } from "react-router";
 
 import {
   Badge,
@@ -14,7 +14,9 @@ import {
   linkClass,
   PageHeader,
   Pager,
+  PeriodPicker,
   rowClass,
+  SortableTh,
   TableCard,
   theadClass,
 } from "../components/ui";
@@ -22,6 +24,8 @@ import { api } from "../lib/api";
 import { useCan } from "../lib/auth";
 import { useCount } from "../lib/counts";
 import { day, num, rub } from "../lib/format";
+import { DEFAULT_PERIOD, type Range, readPeriod, withRange } from "../lib/period";
+import { useUrlParams } from "../lib/url";
 import type { Batch, Page } from "../lib/types";
 
 const PAGE_SIZE = 15;
@@ -40,15 +44,19 @@ const COLUMNS = [
   ["status", "Статус"],
 ] as const;
 
+const FROM = "received_from";
+const TO = "received_to";
+
 /** Фильтры, сортировка и страница живут в адресе: ссылку можно отправить коллеге, «Назад» работает. */
 export function BatchesPage() {
-  const [params, setParams] = useSearchParams();
+  const [params, update] = useUrlParams();
   const canReceive = useCan("receipt_create");
   const sort = params.get("sort") ?? "-received_at";
   const page = Number(params.get("page") ?? 1);
   const [resets, setResets] = useState(0); // новый key — поля фильтров перечитывают адрес
+  const { period, range } = readPeriod(params, FROM, TO);
 
-  const query = new URLSearchParams(params);
+  const query = withRange(new URLSearchParams(params), range, FROM, TO);
   query.set("sort", sort);
   query.set("page", String(page));
   query.set("page_size", String(PAGE_SIZE));
@@ -59,18 +67,13 @@ export function BatchesPage() {
     placeholderData: keepPreviousData,
   });
 
-  function update(changes: Record<string, string>) {
-    // Основа — адрес из окна, а не из рендера. Поля с паузой вызывают update позже, из старого рендера,
-    // а setParams(fn) в react-router отдаёт функции адрес того же старого рендера (очереди, как
-    // у setState, у него нет). Два фильтра подряд — «от» и сразу «до» — затирали друг друга.
-    const next = new URLSearchParams(window.location.search);
-    if (!("page" in changes)) next.delete("page"); // новый фильтр — снова первая страница
-    for (const [key, value] of Object.entries(changes)) {
-      if (value) next.set(key, value);
-      else next.delete(key);
-    }
-    setParams(next, { replace: true });
-  }
+  /** Готовый период: даты из колонки больше не нужны. Период по умолчанию в адрес не пишем. */
+  const choosePeriod = (next: string) =>
+    update({ period: next === DEFAULT_PERIOD ? "" : next, [FROM]: "", [TO]: "" });
+
+  /** Дата, введённая в колонке, превращает период в «свои даты» — вторая граница сохраняется. */
+  const setDate = (name: string, value: string) =>
+    update({ period: "custom", [FROM]: range.from ?? "", [TO]: range.to ?? "", [name]: value });
 
   const exportQuery = new URLSearchParams(query);
   exportQuery.delete("page");
@@ -86,7 +89,7 @@ export function BatchesPage() {
             variant="ghost"
             icon={X}
             onClick={() => {
-              setParams(params.has("sort") ? { sort } : {}, { replace: true });
+              update(Object.fromEntries([...params.keys()].filter((k) => k !== "sort").map((k) => [k, ""])));
               setResets((n) => n + 1);
             }}
           >
@@ -104,7 +107,14 @@ export function BatchesPage() {
           </Link>
         )}
       </PageHeader>
-      <StatusBar status={params.get("status") ?? ""} onSelect={(status) => update({ status })} />
+      <div className="mb-3">
+        <PeriodPicker label="Дата поступления" value={period} onChange={choosePeriod} />
+      </div>
+      <StatusBar
+        status={params.get("status") ?? ""}
+        range={range}
+        onSelect={(status) => update({ status })}
+      />
       <ErrorBox error={error} />
       {/* Таблица видна и при ошибке: иначе неверный фильтр нельзя было бы исправить. */}
       <TableCard
@@ -124,38 +134,24 @@ export function BatchesPage() {
       >
         <thead className={theadClass}>
           <tr>
-            {COLUMNS.map(([field, title]) => {
-              const active = sort.replace("-", "") === field;
-              const descending = active && sort.startsWith("-");
-              const SortIcon = !active ? ChevronsUpDown : descending ? ArrowDown : ArrowUp;
-              return (
-                <th
-                  key={field}
-                  className={thClass}
-                  aria-sort={active ? (descending ? "descending" : "ascending") : "none"}
-                >
-                  <button
-                    type="button"
-                    className="inline-flex items-center gap-1 hover:text-ink"
-                    onClick={() => update({ sort: active && !descending ? `-${field}` : field })}
-                  >
-                    {title}
-                    <SortIcon
-                      className={`size-3.5 ${active ? "text-wax" : "opacity-40"}`}
-                      aria-hidden="true"
-                    />
-                  </button>
-                </th>
-              );
-            })}
+            {COLUMNS.map(([field, title]) => (
+              <SortableTh
+                key={field}
+                field={field}
+                title={title}
+                sort={sort}
+                onSort={(next) => update({ sort: next })}
+                className={thClass}
+              />
+            ))}
           </tr>
           <tr key={resets} className="align-top">
             <FilterCell name="number" params={params} update={update} />
             <FilterCell name="material" params={params} update={update} />
             <FilterCell name="supplier" params={params} update={update} />
             <th className="space-y-1 px-2 pb-2.5 font-normal">
-              <DateInput label="Дата с" name="received_from" params={params} update={update} />
-              <DateInput label="Дата по" name="received_to" params={params} update={update} />
+              <DateInput label="Дата с" value={range.from} onChange={(v) => setDate(FROM, v)} />
+              <DateInput label="Дата по" value={range.to} onChange={(v) => setDate(TO, v)} />
             </th>
             <RangeCell name="qty_initial" params={params} update={update} />
             <RangeCell name="qty_on_hand" params={params} update={update} />
@@ -225,12 +221,22 @@ const SEGMENTS = [
   ["rejected", "Брак", "bg-bad"],
 ] as const;
 
-/** Сколько партий в каждом статусе. Клик включает фильтр, повторный — снимает. */
-function StatusBar({ status, onSelect }: { status: string; onSelect: (status: string) => void }) {
+/** Сколько партий в каждом статусе за выбранный период. Клик включает фильтр, повторный — снимает. */
+function StatusBar({
+  status,
+  range,
+  onSelect,
+}: {
+  status: string;
+  range: Range;
+  onSelect: (status: string) => void;
+}) {
+  const dates = withRange(new URLSearchParams(), range, FROM, TO).toString();
+  const path = (value: string) => `/batches?status=${value}${dates && `&${dates}`}`;
   const counts: Record<string, number> = {
-    accepted: useCount("/batches?status=accepted") ?? 0,
-    on_check: useCount("/batches?status=on_check") ?? 0,
-    rejected: useCount("/batches?status=rejected") ?? 0,
+    accepted: useCount(path("accepted")) ?? 0,
+    on_check: useCount(path("on_check")) ?? 0,
+    rejected: useCount(path("rejected")) ?? 0,
   };
   const total = Object.values(counts).reduce((sum, n) => sum + n, 0);
   return (
@@ -239,7 +245,7 @@ function StatusBar({ status, onSelect }: { status: string; onSelect: (status: st
       className="mb-4 flex flex-wrap items-center gap-x-8 gap-y-3 rounded-xl border border-line bg-card px-5 py-4"
     >
       <div>
-        <div className="text-xs font-medium text-muted">Всего партий</div>
+        <div className="text-xs font-medium text-muted">Партий за период</div>
         <div className="mt-1 text-xl font-semibold tracking-tight tabular-nums">{total || "—"}</div>
       </div>
       <div className="min-w-64 flex-1">
@@ -327,14 +333,22 @@ function RangeCell({ name, ...rest }: FilterProps) {
   );
 }
 
-function DateInput({ label, name, params, update }: FilterProps & { label: string }) {
+function DateInput({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value?: string;
+  onChange: (value: string) => void;
+}) {
   return (
     <input
       type="date"
       aria-label={label}
       className={filterClass}
-      value={params.get(name) ?? ""}
-      onChange={(e) => update({ [name]: e.target.value })}
+      value={value ?? ""}
+      onChange={(e) => onChange(e.target.value)}
     />
   );
 }
