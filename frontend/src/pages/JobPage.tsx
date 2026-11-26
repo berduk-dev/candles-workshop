@@ -89,7 +89,19 @@ export function JobPage() {
         {canManage && job.status === "planned" && (
           <>
             {job.has_deficit && (
-              <Button variant="secondary" icon={PackagePlus} onClick={() => run("reserve")}>
+              // Кнопка добирает резерв из свободного остатка. Если по дефицитным материалам
+              // свободного нет (ждём поступления), нажимать бессмысленно — объясняем почему.
+              <Button
+                variant="secondary"
+                icon={PackagePlus}
+                disabled={!canTopUp(job)}
+                title={
+                  canTopUp(job)
+                    ? "Добрать недостающее из свободного остатка"
+                    : "Свободного остатка по дефицитным материалам нет — сначала нужно поступление"
+                }
+                onClick={() => run("reserve")}
+              >
                 Дозарезервировать
               </Button>
             )}
@@ -371,4 +383,9 @@ function CompleteForm({
       </Card>
     </div>
   );
+}
+
+/** Есть что добрать: у дефицитного материала появился свободный остаток. */
+function canTopUp(job: JobCard): boolean {
+  return job.components.some((c) => !isZero(c.qty_deficit) && !isZero(c.qty_free));
 }

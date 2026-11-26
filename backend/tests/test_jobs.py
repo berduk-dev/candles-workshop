@@ -117,6 +117,28 @@ async def test_reserve_more_after_new_receipt(session, users, materials, recipe,
     card = await jobs.get_card(session, users[Role.TECHNOLOGIST], job.id)
     assert not card.has_deficit
     assert [r.qty for r in card.reservations if r.material_code == "WAX-SOY"] == [D("1.5"), D("2.5")]
+    # В журнале — только изменения, а не всё задание целиком.
+    entry = card.history[-1]
+    assert (entry.action, entry.before, entry.after) == (
+        "reserved_more",
+        {"deficit": {"WAX-SOY": "2.500"}, "added": None},
+        {"deficit": {}, "added": {"WAX-SOY": "2.500"}},
+    )
+    with pytest.raises(DomainError, match="всё уже в резерве"):
+        await jobs.reserve_more(session, users[Role.TECHNOLOGIST], job.id)
+
+
+async def test_reserve_more_without_free_stock_is_refused_and_not_logged(
+    session, users, materials, recipe, fx
+):
+    await add_batch(session, users, fx, "WAX-SOY", "1.5", OLD)
+    await add_batch(session, users, fx, "JAR-200", "100", OLD)
+    job = await planned_job(session, users, recipe, 20)
+    history_before = len((await jobs.get_card(session, users[Role.TECHNOLOGIST], job.id)).history)
+
+    with pytest.raises(DomainError, match=r"Дозарезервировать нечего.*Не хватает: 2,5 кг — Воск соевый"):
+        await jobs.reserve_more(session, users[Role.TECHNOLOGIST], job.id)
+    assert len((await jobs.get_card(session, users[Role.TECHNOLOGIST], job.id)).history) == history_before
 
 
 async def test_two_parallel_plans_never_reserve_the_same_stock(session, users, materials, recipe, fx):

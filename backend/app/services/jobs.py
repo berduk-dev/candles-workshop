@@ -148,8 +148,9 @@ async def update_draft(session: AsyncSession, user: User, job_id: int, data: Job
 # ---------- планирование и резервы ----------
 
 
-async def _reserve_missing(session: AsyncSession, job: Job) -> dict[str, str]:
-    """Добирает резерв до потребности. Возвращает {код материала: дефицит} — пусто, если всего хватило."""
+async def _reserve_missing(session: AsyncSession, job: Job) -> tuple[dict[int, Decimal], dict[int, Decimal]]:
+    """Добирает резерв до потребности из свободного остатка по FIFO.
+    Возвращает (дефицит после, сколько добрано сейчас) — оба по id материала."""
     items = await _items(session, job.id)
     batches = await lock_batches(session, {i.material_id for i in items})
     existing = {r.batch_id: r for r in await _reservations(session, job.id)}
@@ -159,6 +160,7 @@ async def _reserve_missing(session: AsyncSession, job: Job) -> dict[str, str]:
         reserved[by_batch[r.batch_id].material_id] += r.qty
 
     deficit: dict[int, Decimal] = {}
+    added: dict[int, Decimal] = defaultdict(lambda: ZERO)
     for item in items:
         need = item.qty_required - reserved[item.material_id]
         for batch, take in allocate_fifo(batches, item.material_id, need):
@@ -168,11 +170,17 @@ async def _reserve_missing(session: AsyncSession, job: Job) -> dict[str, str]:
             else:
                 session.add(Reservation(job_id=job.id, batch_id=batch.id, qty=take))
             need -= take
+            added[item.material_id] += take
         if need > 0:
             deficit[item.material_id] = need
     await session.flush()
-    materials = await _materials(session, set(deficit))
-    return {materials[mid].code: str(qty) for mid, qty in deficit.items()}
+    return deficit, dict(added)
+
+
+async def _by_code(session: AsyncSession, quantities: dict[int, Decimal]) -> dict[str, str]:
+    """{id материала: количество} → {код: количество} — так читается журнал изменений."""
+    materials = await _materials(session, set(quantities))
+    return {materials[mid].code: str(qty) for mid, qty in quantities.items()}
 
 
 async def plan(session: AsyncSession, user: User, job_id: int) -> Job:
@@ -189,18 +197,38 @@ async def plan(session: AsyncSession, user: User, job_id: int) -> Job:
         )
     job.status = JobStatus.PLANNED
     await session.flush()
-    deficit = await _reserve_missing(session, job)
-    _record(session, user, job, "planned", before, deficit=deficit)
+    deficit, _ = await _reserve_missing(session, job)
+    _record(session, user, job, "planned", before, deficit=await _by_code(session, deficit))
     return job
 
 
 async def reserve_more(session: AsyncSession, user: User, job_id: int) -> Job:
-    """Дозарезервировать: добрать недостающее после новых поступлений."""
+    """Дозарезервировать: добрать недостающее, когда на складе появился свободный остаток
+    (приняли новую партию, отменили другое задание). Если добрать нечего — понятный отказ,
+    а не пустая запись в журнале."""
     require(user, Perm.JOB_MANAGE)
     job = await _lock_job(session, job_id)
     _expect(job, JobStatus.PLANNED, action="дозарезервировать")
-    deficit = await _reserve_missing(session, job)
-    _record(session, user, job, "reserved_more", None, deficit=deficit)
+    deficit, added = await _reserve_missing(session, job)
+    if not added:
+        if not deficit:
+            raise DomainError(f"У задания {job.number} всё уже в резерве.")
+        shortage = await _shortage_text(session, deficit)
+        raise DomainError(
+            f"Дозарезервировать нечего: на складе нет свободного остатка. {shortage} "
+            "Оформите поступление и примите партию, потом нажмите ещё раз."
+        )
+    # В журнал — только то, что изменилось: сколько добрали и каким стал дефицит.
+    was = {mid: deficit.get(mid, ZERO) + added.get(mid, ZERO) for mid in deficit.keys() | added.keys()}
+    audit.record(
+        session,
+        user,
+        entity="job",
+        entity_id=job.id,
+        action="reserved_more",
+        before={"deficit": await _by_code(session, was)},
+        after={"deficit": await _by_code(session, deficit), "added": await _by_code(session, added)},
+    )
     return job
 
 

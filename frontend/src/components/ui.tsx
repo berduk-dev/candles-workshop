@@ -414,6 +414,7 @@ const FIELDS: Record<string, string> = {
   planned_date: "плановая дата",
   produced_qty: "выпущено",
   deficit: "дефицит",
+  added: "добрано в резерв",
   actual: "фактический расход",
   name: "название",
   items: "состав",
