@@ -23,8 +23,8 @@ jobs:
       run:
         working-directory: backend
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.11"
           cache: pip
@@ -40,8 +40,8 @@ jobs:
       run:
         working-directory: frontend
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
@@ -56,9 +56,9 @@ jobs:
     env:
       LLM_STUB: "true" # вместо модели — заглушка: ключ и сеть не нужны
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - run: docker compose up -d --build --wait
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
