@@ -28,6 +28,8 @@ def has_rate(day: date) -> bool:
 
 def rate_for(currency: str, day: date) -> Decimal:
     n = day.toordinal()
+    # Синус здесь только рисует правдоподобную кривую: это выдуманный «чужой» сервис, а не учёт.
+    # Наружу курс уходит строкой с 4 знаками, приложение читает её сразу в Decimal.
     # Медленный тренд + недельные колебания ±1.5 руб.
     value = (
         BASE_RATES[currency]
