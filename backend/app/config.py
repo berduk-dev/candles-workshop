@@ -27,7 +27,7 @@ class Settings(BaseSettings):
     llm_primary_model: str = "gpt-6-luna"
     llm_fallback_model: str = "gpt-5.4-mini"
     # Пусто — обычный тариф, «fast» — быстрый (токены вдвое дороже). Выключен: на эвалах он быстрее
-    # на 0,7–1,4 с, но чаще ошибается в выборе инструмента (README, «Скорость»).
+    # на 0,7–1,4 с, но чаще ошибается в выборе инструмента (замеры — в evals/README.md).
     llm_service_tier: str = ""
     # Сколько модель «думает» перед ответом: none, low, medium, high. Пусто — как решит модель.
     llm_reasoning_effort: str = ""
