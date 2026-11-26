@@ -7,7 +7,7 @@ from fastapi import APIRouter, Query
 
 from app.deps import CurrentUser, FxDep, SessionDep
 from app.models import Currency, JobStatus
-from app.schemas.common import Page
+from app.schemas.common import IdOut, Page
 from app.schemas.production import (
     DeficitOut,
     JobCardOut,
@@ -90,6 +90,12 @@ async def create_job(data: JobIn, session: SessionDep, user: CurrentUser):
     job = await jobs.create_draft(session, user, data)
     await session.commit()
     return await jobs.get_card(session, user, job.id)
+
+
+@router.get("/jobs/by-number/{number}", response_model=IdOut, summary="Найти задание по номеру")
+async def find_job(number: str, session: SessionDep, user: CurrentUser):
+    """Номер (З-000017, з-17) → id. Нужен ссылкам из ответов ассистента: он знает только номер."""
+    return IdOut(id=(await jobs.find_by_number(session, user, number)).id)
 
 
 @router.get("/jobs/{job_id}", response_model=JobCardOut, summary="Карточка задания")

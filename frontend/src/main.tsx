@@ -10,6 +10,7 @@ import { ApiError } from "./lib/api";
 import { AuthGate } from "./lib/auth";
 import { AuditPage } from "./pages/AuditPage";
 import { BatchPage } from "./pages/BatchPage";
+import { ByNumberPage } from "./pages/ByNumberPage";
 import { BatchesPage } from "./pages/BatchesPage";
 import { ChatPage } from "./pages/ChatPage";
 import { JobPage } from "./pages/JobPage";
@@ -42,10 +43,12 @@ createRoot(document.getElementById("root")!).render(
               <Route element={<PaddedPage />}>
                 <Route path="memory" element={<MemoryPage />} />
                 <Route path="batches" element={<BatchesPage />} />
+                <Route path="batches/n/:number" element={<ByNumberPage kind="batches" />} />
                 <Route path="batches/:id" element={<BatchPage />} />
                 <Route path="receipts/new" element={<ReceiptPage />} />
                 <Route path="stock" element={<StockPage />} />
                 <Route path="jobs" element={<JobsPage />} />
+                <Route path="jobs/n/:number" element={<ByNumberPage kind="jobs" />} />
                 <Route path="jobs/:id" element={<JobPage />} />
                 <Route path="audit" element={<AuditPage />} />
                 <Route path="*" element={<p>Страница не найдена.</p>} />

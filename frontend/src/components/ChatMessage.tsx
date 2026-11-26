@@ -6,6 +6,7 @@ import remarkGfm from "remark-gfm";
 
 import { api } from "../lib/api";
 import type { Action, ChatFile, ChatMessage as Message } from "../lib/types";
+import { LinkedText, remarkDocLinks } from "./DocLinks";
 import { Badge, Button, ErrorBox, linkClass, Logo } from "./ui";
 
 export function ChatMessage({ message, busy }: { message: Message; busy?: string | null }) {
@@ -13,7 +14,7 @@ export function ChatMessage({ message, busy }: { message: Message; busy?: string
     return (
       <div className="ml-auto max-w-[80%]">
         <div className="ml-auto w-fit rounded-2xl rounded-br-md bg-paper px-4 py-2.5 whitespace-pre-wrap">
-          {message.content}
+          <LinkedText text={message.content} />
         </div>
         <Files files={message.files} />
       </div>
@@ -104,12 +105,16 @@ function AnswerText({ text, files }: { text: string; files: ChatFile[] }) {
   };
   return (
     <Markdown
-      remarkPlugins={[remarkGfm]}
+      remarkPlugins={[remarkGfm, remarkDocLinks]}
       urlTransform={(url) => (url.startsWith("sandbox:") ? (local(url) ?? "") : defaultUrlTransform(url))}
       components={{
         img: () => null,
         a: ({ href, children }) =>
-          href ? (
+          // Свои страницы (номера заданий и партий) — переход внутри приложения,
+          // файлы и внешние адреса — в новой вкладке.
+          href?.startsWith("/") && !href.startsWith("/api/") ? (
+            <Link to={href}>{children}</Link>
+          ) : href ? (
             <a href={href} target="_blank" rel="noreferrer">
               {children}
             </a>
@@ -228,7 +233,7 @@ function ActionCard({ action }: { action: Action }) {
         </div>
       ) : (
         <p className="border-t border-line px-4 py-3 text-sm">
-          {action.result}{" "}
+          {action.result && <LinkedText text={action.result} />}{" "}
           {action.status === "confirmed" && (
             <Link className={linkClass} to="/jobs?period=all">
               К заданиям

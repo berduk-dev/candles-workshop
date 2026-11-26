@@ -19,6 +19,10 @@ class StrictModel(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
 
+class IdOut(BaseModel):
+    id: int
+
+
 class Page(BaseModel, Generic[T]):
     items: list[T]
     total: int

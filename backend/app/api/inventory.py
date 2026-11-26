@@ -5,7 +5,7 @@ from typing import Annotated
 from fastapi import APIRouter, Query, Response
 
 from app.deps import CurrentUser, FxDep, SessionDep
-from app.schemas.common import Page
+from app.schemas.common import IdOut, Page
 from app.schemas.inventory import (
     BatchCardOut,
     BatchOut,
@@ -78,6 +78,12 @@ async def export_batches(session: SessionDep, user: CurrentUser, query: BatchQue
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         headers={"Content-Disposition": 'attachment; filename="batches.xlsx"'},
     )
+
+
+@router.get("/batches/by-number/{number}", response_model=IdOut, summary="Найти партию по номеру")
+async def find_batch(number: str, session: SessionDep, user: CurrentUser):
+    """Номер (П-000019, п-19) → id. Нужен ссылкам из ответов ассистента."""
+    return IdOut(id=(await batches.find_by_number(session, user, number)).id)
 
 
 @router.get("/batches/{batch_id}", response_model=BatchCardOut, summary="Карточка партии")

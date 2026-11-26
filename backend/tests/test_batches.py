@@ -152,3 +152,13 @@ async def test_excel_export_respects_filters_and_keeps_numbers(client, session, 
     assert row["Код"] == "WAX-SOY"
     assert row["Остаток"] == 10.5 and isinstance(row["Остаток"], float)
     assert row["Дата поступления"].date() == date(2026, 10, 1)
+
+
+async def test_documents_are_found_by_number_for_links(client, session, users, materials, fx):
+    await make_receipt(session, users[Role.STOREKEEPER], fx, [("WAX-SOY", "10")])
+    headers = await auth_headers(client, "storekeeper")
+    found = await client.get("/api/batches/by-number/п-1", headers=headers)
+    assert found.json() == {"id": 1}
+    missing = await client.get("/api/batches/by-number/П-000099", headers=headers)
+    assert (missing.status_code, missing.json()["detail"]) == (404, "Партия П-000099 не найдена.")
+    assert (await client.get("/api/jobs/by-number/З-000099", headers=headers)).status_code == 404
